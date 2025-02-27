@@ -15,7 +15,11 @@ import {
   updateAnimalInsecure,
 } from '../../../database/animals';
 import { createSessionInsecure } from '../../../database/sessions';
-import { createUserInsecure, getUserInsecure } from '../../../database/users';
+import {
+  createUserInsecure,
+  getUserInsecure,
+  getUserWithPasswordHashInsecure,
+} from '../../../database/users';
 import type { Resolvers } from '../../../graphql/graphqlGeneratedTypes';
 import type { Animal } from '../../../migrations/00000-createTableAnimals';
 import { userSchema } from '../../../migrations/00002-createTableUsers';
@@ -58,6 +62,8 @@ const typeDefs = gql`
     ): Animal
 
     register(username: String!, password: String!): User
+
+    login(username: String!, password: String!): User
   }
 `;
 
@@ -161,6 +167,55 @@ const resolvers: Resolvers = {
 
       // 8. Return the new user information
       return newUser;
+    },
+
+    login: async (parent, args) => {
+      // 1. Validate the user data with zod
+      const result = userSchema.safeParse(args);
+
+      if (!result.success) {
+        throw new GraphQLError('Required field missing');
+      }
+
+      // 2. verify the user credentials
+      const userWithPasswordHash = await getUserWithPasswordHashInsecure(
+        result.data.username,
+      );
+
+      if (!userWithPasswordHash) {
+        throw new GraphQLError('username or password not valid');
+      }
+
+      // 3. Validate the user password by comparing with hashed password
+      const passwordHash = await bcrypt.compare(
+        result.data.password,
+        userWithPasswordHash.passwordHash,
+      );
+
+      if (!passwordHash) {
+        throw new GraphQLError('username or password not valid');
+      }
+
+      // 4. Create a token
+      const token = crypto.randomBytes(100).toString('base64');
+
+      // 5. Create the session record
+      const session = await createSessionInsecure(
+        token,
+        userWithPasswordHash.id,
+      );
+
+      if (!session) {
+        throw new GraphQLError('Sessions creation failed');
+      }
+
+      (await cookies()).set({
+        name: 'sessionToken',
+        value: session.token,
+        ...secureCookieOptions,
+      });
+
+      return null;
     },
   },
 };
