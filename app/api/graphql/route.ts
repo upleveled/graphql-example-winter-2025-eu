@@ -14,6 +14,7 @@ import {
   getAnimalsInsecure,
   updateAnimal,
 } from '../../../database/animals';
+import { createNote } from '../../../database/notes';
 import { createSessionInsecure } from '../../../database/sessions';
 import {
   createUserInsecure,
@@ -48,6 +49,12 @@ const typeDefs = gql`
     username: String!
   }
 
+  type Note {
+    id: ID!
+    title: String
+    textContent: String
+  }
+
   type Query {
     animals: [Animal]
     animal(id: ID!): Animal
@@ -68,6 +75,8 @@ const typeDefs = gql`
     register(username: String!, password: String!): User
 
     login(username: String!, password: String!): User
+
+    createNote(title: String!, textContent: String!): Note
   }
 `;
 
@@ -234,6 +243,26 @@ const resolvers: Resolvers = {
       });
 
       return null;
+    },
+    createNote: async (parent, args, context) => {
+      if (!context.sessionTokenCookie) {
+        throw new GraphQLError('You must be logged in to create a note');
+      }
+
+      if (
+        typeof args.title !== 'string' ||
+        typeof args.textContent !== 'string' ||
+        !args.title ||
+        !args.textContent
+      ) {
+        throw new GraphQLError('Required field missing');
+      }
+
+      return await createNote(
+        context.sessionTokenCookie.value,
+        args.title,
+        args.textContent,
+      );
     },
   },
 };
