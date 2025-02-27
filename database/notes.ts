@@ -38,6 +38,22 @@ export const getNote = cache(
   },
 );
 
+export async function selectNoteExists(noteId: Note['id']) {
+  const [record] = await sql<{ exists: boolean }[]>`
+    SELECT
+      EXISTS (
+        SELECT
+          TRUE
+        FROM
+          notes
+        WHERE
+          id = ${noteId}
+      )
+  `;
+
+  return Boolean(record?.exists);
+}
+
 export const createNote = cache(
   async (
     sessionToken: Session['token'],
