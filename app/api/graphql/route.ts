@@ -8,11 +8,11 @@ import { GraphQLError } from 'graphql';
 import { cookies } from 'next/headers';
 import type { NextRequest, NextResponse } from 'next/server';
 import {
-  createAnimalInsecure,
-  deleteAnimalInsecure,
+  createAnimal,
+  deleteAnimal,
   getAnimalInsecure,
   getAnimalsInsecure,
-  updateAnimalInsecure,
+  updateAnimal,
 } from '../../../database/animals';
 import { createSessionInsecure } from '../../../database/sessions';
 import {
@@ -24,6 +24,10 @@ import type { Resolvers } from '../../../graphql/graphqlGeneratedTypes';
 import type { Animal } from '../../../migrations/00000-createTableAnimals';
 import { userSchema } from '../../../migrations/00002-createTableUsers';
 import { secureCookieOptions } from '../../../util/cookies';
+
+export type Context = {
+  sessionTokenCookie?: { value: string };
+};
 
 export type GraphqlResponseBody =
   | {
@@ -79,7 +83,10 @@ const resolvers: Resolvers = {
   },
 
   Mutation: {
-    createAnimal: async (parent, args) => {
+    createAnimal: async (parent, args, context) => {
+      if (!context.sessionTokenCookie) {
+        throw new GraphQLError('Unauthorized operation');
+      }
       if (
         typeof args.firstName !== 'string' ||
         typeof args.type !== 'string' ||
@@ -90,14 +97,18 @@ const resolvers: Resolvers = {
         throw new GraphQLError('Required field missing');
       }
 
-      return await createAnimalInsecure({
+      return await createAnimal(context.sessionTokenCookie.value, {
         type: args.type,
         firstName: args.firstName,
         accessory: args.accessory || null,
       });
     },
 
-    updateAnimal: async (parent, args) => {
+    updateAnimal: async (parent, args, context) => {
+      if (!context.sessionTokenCookie) {
+        throw new GraphQLError('Unauthorized operation');
+      }
+
       if (
         typeof args.firstName !== 'string' ||
         typeof args.type !== 'string' ||
@@ -108,7 +119,7 @@ const resolvers: Resolvers = {
         throw new Error('Required field missing');
       }
 
-      return await updateAnimalInsecure({
+      return await updateAnimal(context.sessionTokenCookie.value, {
         id: Number(args.id),
         type: args.type,
         firstName: args.firstName,
@@ -116,8 +127,15 @@ const resolvers: Resolvers = {
       });
     },
 
-    deleteAnimal: async (parent, args) => {
-      return await deleteAnimalInsecure(Number(args.id));
+    deleteAnimal: async (parent, args, context) => {
+      if (!context.sessionTokenCookie) {
+        throw new GraphQLError('Unauthorized operation');
+      }
+
+      return await deleteAnimal(
+        context.sessionTokenCookie.value,
+        Number(args.id),
+      );
     },
 
     register: async (parent, args) => {
@@ -227,7 +245,16 @@ const schema = makeExecutableSchema({
 
 const apolloServer = new ApolloServer({ schema });
 
-const apolloServerRouteHandler = startServerAndCreateNextHandler(apolloServer);
+const apolloServerRouteHandler = startServerAndCreateNextHandler<NextRequest>(
+  apolloServer,
+  {
+    context: async (req) => {
+      return {
+        sessionTokenCookie: await req.cookies.get('sessionToken'),
+      };
+    },
+  },
+);
 
 // export async function GET(req: NextRequest) {
 //   return await apolloServerRouteHandler(req);
