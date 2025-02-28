@@ -11,6 +11,7 @@ const codegenConfig: CodegenConfig = {
 
   config: {
     useTypeImports: true,
+    contextType: '../app/api/graphql/route#Context',
   },
 };
 

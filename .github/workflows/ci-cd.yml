@@ -1,0 +1,45 @@
+name: CI
+on: push
+
+jobs:
+  lint-and-check-types:
+    name: Lint and check types
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_BASE_URL: http://localhost:3000
+      PGDATABASE: graphql_example_winter_2025_eu
+      PGHOST: localhost
+      PGPASSWORD: graphql_example_winter_2025_eu
+      PGUSERNAME: graphql_example_winter_2025_eu
+    steps:
+      - name: Start preinstalled PostgreSQL on Ubuntu
+        run: |
+          sudo systemctl start postgresql.service
+          pg_isready
+      - name: Create database user
+        run: |
+          sudo -u postgres psql --command="CREATE USER graphql_example_winter_2025_eu PASSWORD 'graphql_example_winter_2025_eu'" --command="\du"
+      - name: Create database and allow user
+        run: |
+          sudo -u postgres createdb --owner=graphql_example_winter_2025_eu graphql_example_winter_2025_eu
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install
+      - name: Install SafeQL if not yet installed (eg. on Windows dev machines)
+        run: grep package.json -e '@ts-safeql/eslint-plugin' || pnpm add @ts-safeql/eslint-plugin libpg-query
+      - name: Run database migrations
+        run: pnpm migrate up
+      - name: Build Next.js app (types needed for TSC and ESLint)
+        run: pnpm build
+      - name: Check TypeScript Types
+        run: pnpm tsc
+      - name: Lint with ESLint
+        run: pnpm eslint . --max-warnings 0
+      - name: Lint with Stylelint
+        run: pnpm stylelint '**/*.{css,scss,less,js,tsx}'

@@ -18,6 +18,7 @@
     "@as-integrations/next": "3.2.0",
     "@graphql-tools/schema": "10.0.18",
     "@upleveled/ley": "0.9.2",
+    "bcrypt": "^5.1.1",
     "dotenv-safe": "9.1.0",
     "graphql": "16.10.0",
     "next": "15.1.7",
@@ -35,6 +36,7 @@
     "@graphql-codegen/typescript-resolvers": "4.4.2",
     "@parcel/watcher": "2.5.1",
     "@ts-safeql/eslint-plugin": "^3.6.6",
+    "@types/bcrypt": "5.0.2",
     "@types/dotenv-safe": "8.1.6",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -53,7 +55,12 @@
   "packageManager": "pnpm@10.4.1+sha512.c753b6c3ad7afa13af388fa6d808035a008e30ea9993f58c6663e2bc5ff21679aa834db094987129aa4d488b86df57f7b634981b2f827cdcacc698cc0cfb88af",
   "pnpm": {
     "onlyBuiltDependencies": [
-      "libpg-query"
+      "@apollo/protobufjs",
+      "@parcel/watcher",
+      "bcrypt",
+      "esbuild",
+      "libpg-query",
+      "sharp"
     ]
   }
 }

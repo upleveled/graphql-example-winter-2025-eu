@@ -1,0 +1,17 @@
+.notes {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1rem;
+
+  li {
+    padding: 0.5rem;
+    list-style: none;
+  }
+}
+
+.notesForm {
+  > div {
+    position: sticky;
+    top: 0;
+  }
+}
